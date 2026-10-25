@@ -1,12 +1,14 @@
 # Zoom Attendance Dashboards (web)
 
+**Open the page: https://research-enablement.github.io/zoom-attendance-web/**
+
 A web page that turns Zoom attendance exports into attendance dashboards, with nothing to install. Built at the University of Illinois Urbana-Champaign for any campus unit that runs recurring Zoom sessions.
 
 It runs the [zoom-attendance-template](https://github.com/Research-Enablement/zoom-attendance-template) pipeline inside your browser. **Nothing you choose is uploaded anywhere.** Files are read into the browser tab's memory, and you download the results.
 
 ## How to use it
 
-Open the page in Chrome, Edge or Firefox. The first visit takes about 20 seconds to load.
+Open [the page](https://research-enablement.github.io/zoom-attendance-web/) in Chrome, Edge or Firefox. The first visit takes about 20 seconds to load.
 
 1. **Attendance history.**
    - First time for your department: click **Start a new history** and type your department name.
@@ -76,12 +78,9 @@ When a fix is made to the pipeline in `zoom-attendance-template`, copy the chang
 
 ### Publishing with GitHub Pages
 
-On the repo's GitHub page: **Settings → Pages**. Under **Build and deployment**, set **Source** to **Deploy from a branch**, then choose **main** and **/ (root)**, and click **Save**. After a minute or two, the page is live at `https://research-enablement.github.io/zoom-attendance-web/`.
+On the repo's GitHub page: **Settings → Pages**. Under **Build and deployment**, set **Source** to **Deploy from a branch**, then choose **main** and **/ (root)**, and click **Save**. After a minute or two, the page is live at https://research-enablement.github.io/zoom-attendance-web/.
 
 ## Problems and questions
 
 Open an issue on this repo's **Issues** tab. Describe what you did and copy any message the page showed. Never attach data files or paste attendee names.
 
-## Credits
-
-The page design and the in-browser approach come from Josh Henry's experiment, which used [Pyodide](https://pyodide.org) (an idea borrowed from Lawrence Angrave's Agentic Chat Lab).
