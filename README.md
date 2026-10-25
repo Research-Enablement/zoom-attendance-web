@@ -82,6 +82,4 @@ On the repo's GitHub page: **Settings → Pages**. Under **Build and deployment*
 
 Open an issue on this repo's **Issues** tab. Describe what you did and copy any message the page showed. Never attach data files or paste attendee names.
 
-## Credits
 
-The page design and the in-browser approach come from Josh Henry's experiment, which used [Pyodide](https://pyodide.org) (an idea borrowed from Lawrence Angrave's Agentic Chat Lab).
