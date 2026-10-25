@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoom Attendance Dashboards</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+  :root { --blue: #13294B; --orange: #E84A27; --bg: #f0f2f5; --card: #fff; --text: #333;
+          --muted: #666; --line: #e5e5e5; --ok: #2E7D32; --okbg: #E8F5E9; --warn: #BF360C; --warnbg: #FFF3E0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.45; }
+  header { background: var(--blue); color: #fff; padding: 22px 16px; border-bottom: 5px solid var(--orange); }
+  header .in, main { max-width: 980px; margin: 0 auto; }
+  .label { font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; color: var(--orange); font-weight: 700; }
+  h1 { margin: 4px 0 6px; font-size: 1.6rem; }
+  header p { margin: 0; opacity: .8; font-size: .9rem; }
+  main { padding: 20px 16px 40px; }
+  .card { background: var(--card); border-radius: 8px; padding: 18px 20px; margin-bottom: 18px;
+          box-shadow: 0 1px 5px rgba(0,0,0,.07); }
+  .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+             border-left: 4px solid var(--orange); padding-left: 9px; margin: 0 0 14px; }
+  .card h3 { font-size: .95rem; margin: 20px 0 6px; color: var(--blue); }
+  .step { display: inline-block; background: var(--blue); color: #fff; border-radius: 50%; width: 1.5em;
+          height: 1.5em; text-align: center; line-height: 1.5em; font-size: .8rem; margin-right: 6px; }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: .88rem; }
+  input[type=text], input[type=number], select { width: 100%; max-width: 460px; padding: 8px 10px;
+          border: 1px solid #bbb; border-radius: 6px; font: inherit; background: #fff; }
+  input[type=number] { max-width: 120px; }
+  input[type=file] { font: inherit; max-width: 100%; }
+  button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--blue);
+           background: #fff; color: var(--blue); cursor: pointer; margin: 8px 8px 0 0; }
+  button.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+  button.small { padding: 4px 10px; font-size: .8rem; margin: 4px 6px 0 0; }
+  button.chip { padding: 3px 10px; font-size: .78rem; font-weight: 500; border-radius: 999px; margin: 4px 6px 0 0; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #2E82C5; outline-offset: 2px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .hint { color: var(--muted); font-size: .82rem; margin: 4px 0 0; }
+  .status { font-size: .85rem; padding: 8px 12px; border-radius: 6px; background: #eef2f8; margin-bottom: 18px; }
+  .msg { padding: 10px 14px; border-radius: 6px; margin-top: 12px; font-size: .9rem; white-space: pre-wrap; }
+  .msg.ok { background: var(--okbg); color: var(--ok); }
+  .msg.err { background: var(--warnbg); color: var(--warn); }
+  .save-banner { display: none; background: var(--warnbg); color: var(--warn); border-left: 5px solid var(--orange);
+                 padding: 12px 16px; border-radius: 6px; margin-bottom: 18px; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  th { text-align: left; background: var(--blue); color: #fff; padding: 7px 9px; font-size: .72rem;
+       text-transform: uppercase; letter-spacing: .05em; }
+  td { padding: 7px 9px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  td input[type=text], td select { max-width: 280px; padding: 6px 8px; }
+  .tbl-wrap { overflow-x: auto; }
+  .checks label { display: inline-flex; gap: 6px; font-weight: 500; margin: 6px 16px 0 0; }
+  iframe { width: 100%; height: 900px; border: 1px solid var(--line); border-radius: 6px; margin-top: 12px; background: #fff; }
+  details summary { cursor: pointer; font-weight: 600; margin-top: 10px; }
+  .hidden { display: none; }
+  .panel { border: 1px solid var(--line); border-radius: 8px; padding: 4px 16px 16px; margin-top: 16px; background: #fafbfc; }
+  .state { font-weight: 700; font-size: .8rem; white-space: nowrap; }
+  .state.done { color: var(--ok); }
+  .state.open { color: var(--warn); }
+  .newbox { margin-top: 8px; padding: 8px 10px; background: #fff; border: 1px dashed #bbb; border-radius: 6px; }
+  .newbox label { margin: 6px 0 2px; font-size: .78rem; }
+  .tag { display: inline-block; font-size: .7rem; padding: 1px 7px; border-radius: 999px; background: #eef2f8;
+         color: var(--blue); margin-right: 4px; }
+  footer { text-align: center; color: #999; font-size: .75rem; padding: 0 16px 24px; }
+</style>
+</head>
+<body>
+<header><div class="in">
+  <div class="label" id="deptLabel">Zoom Attendance</div>
+  <h1>Zoom Attendance Dashboards</h1>
+  <p>Upload a Zoom attendance file, match anyone it does not recognize, and get the attendance dashboard. Everything runs in this browser tab: no file you choose is sent anywhere.</p>
+</div></header>
+
+<main>
+  <div id="status" class="status" role="status" aria-live="polite">Loading Python (the first visit takes about 20 seconds)…</div>
+  <div id="saveBanner" class="save-banner" role="alert">You have changes that are not saved. Download the updated history file (step 5) before closing this tab: it is the only copy.</div>
+
+  <section class="card" aria-labelledby="h1s">
+    <h2 id="h1s"><span class="step">1</span>Attendance history</h2>
+    <p class="hint">The history file holds every past session for every meeting type, and everyone you have matched. Load your latest one, or start a new one if this is your department's first time.</p>
+    <label for="histFile">Load history file (.xlsx)</label>
+    <input type="file" id="histFile" accept=".xlsx" disabled>
+    <div class="row"><button id="newHist" disabled>Start a new history</button></div>
+    <div id="newHistBox" class="panel hidden">
+      <label for="newDept">Your department or unit name, shown on the pages</label>
+      <input type="text" id="newDept" placeholder="e.g. Office of the CIO">
+      <label for="newTitle">Title for the overview dashboard</label>
+      <input type="text" id="newTitle" placeholder="Program Attendance Overview">
+      <p class="hint">Leave the title blank to use "Program Attendance Overview". You can change both later in step 2.</p>
+      <div class="row"><button id="createHist" class="primary">Create history</button><button id="cancelNew">Cancel</button></div>
+    </div>
+    <div id="histMsg"></div>
+    <div id="histTable" class="tbl-wrap"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h2s">
+    <h2 id="h2s"><span class="step">2</span>Meeting types and page titles</h2>
+    <div id="typesLocked"><p class="hint">Load or start a history first.</p></div>
+    <div id="typesBox" class="hidden">
+      <h3>Add a meeting type</h3>
+      <label for="typeName">Name, as it should appear on the pages</label>
+      <input type="text" id="typeName" placeholder="e.g. Data Workshop">
+      <div class="checks">
+        <label><input type="checkbox" id="typeTopics" checked> Sessions have a topic</label>
+        <label><input type="checkbox" id="typePresenters" checked> Sessions have presenters</label>
+      </div>
+      <div class="row"><button id="addType">Add meeting type</button></div>
+
+      <h3>Change a meeting type</h3>
+      <label for="editPick">Meeting type</label>
+      <select id="editPick"></select>
+      <label for="editName">Name</label>
+      <input type="text" id="editName">
+      <div class="checks">
+        <label><input type="checkbox" id="editTopics"> Sessions have a topic</label>
+        <label><input type="checkbox" id="editPresenters"> Sessions have presenters</label>
+        <label><input type="checkbox" id="editHidden"> Hidden</label>
+      </div>
+      <p class="hint">Renaming keeps every session and topic; rebuild its pages to show the new name. Hiding removes it from step 3 and the overview, but keeps its data. Untick to bring it back.</p>
+      <div class="row"><button id="saveType">Save changes</button></div>
+
+      <h3>Department name and overview title</h3>
+      <label for="setDept">Department or unit name</label>
+      <input type="text" id="setDept">
+      <label for="setTitle">Overview dashboard title</label>
+      <input type="text" id="setTitle">
+      <div class="row"><button id="saveSettings">Save</button></div>
+    </div>
+    <div id="typesMsg"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h3s">
+    <h2 id="h3s"><span class="step">3</span>Add a meeting</h2>
+    <label for="mtype">Meeting type</label>
+    <select id="mtype" disabled></select>
+    <label for="csvFile">Zoom attendance file (.csv)</label>
+    <input type="file" id="csvFile" accept=".csv" disabled>
+    <p class="hint">Any of these Zoom exports works: the Participants report (best: real join and leave times), the Usage report, or the Meeting list details file. In Zoom: Reports → Usage → pick the meeting → Participants → Export.</p>
+    <div class="checks"><label><input type="checkbox" id="replace"> Replace this date if it is already in the history</label></div>
+    <div class="row"><button id="readFile" class="primary" disabled>Read file</button></div>
+    <div id="addMsg"></div>
+
+    <div id="review" class="panel hidden">
+      <p id="reviewInfo" class="hint"></p>
+
+      <div id="matchBox">
+        <h3>Match these attendees <span id="matchCount" class="state"></span></h3>
+        <p class="hint">These people joined without an email and with a Zoom name the history has not seen. For each one, pick who it is, or add them as a new person. The Zoom name is remembered, so next time they match on their own.</p>
+        <datalist id="peopleList"></datalist>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Zoom name</th><th>Minutes</th><th>Who is it?</th><th></th></tr></thead>
+          <tbody id="matchRows"></tbody>
+        </table></div>
+      </div>
+
+      <details id="newPeopleBox" class="hidden">
+        <summary>New people added from their email (<span id="newPeopleCount"></span>): department and status, optional</summary>
+        <p class="hint">Filling these in puts them under the right college and status on the charts. You can skip it; they show as Unknown until filled in.</p>
+        <datalist id="deptList"></datalist>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Status</th></tr></thead>
+          <tbody id="newPeopleRows"></tbody>
+        </table></div>
+      </details>
+
+      <h3>Session details</h3>
+      <div id="topicField"><label for="topic">Topic</label><input type="text" id="topic"></div>
+      <div id="presenterField"><label for="presenter">Presenter(s), separated by commas</label><input type="text" id="presenter"></div>
+      <label for="length">How long was the meeting, in minutes?</label>
+      <input type="number" id="length" min="1" step="1">
+      <p class="hint">Used to decide who stayed for most of the session. For 60 minutes, that is 50 minutes or more.</p>
+      <div class="row"><button id="saveSession" class="primary">Save session</button><button id="cancelSession">Cancel</button></div>
+      <div id="reviewMsg"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h4s">
+    <h2 id="h4s"><span class="step">4</span>Dashboards</h2>
+    <label for="sessPick">One session</label>
+    <div class="row"><select id="sessPick" disabled></select><button id="showSession" disabled>Show session page</button></div>
+    <label>Overview, across meeting types</label>
+    <div id="typeChecks" class="checks"></div>
+    <div class="row"><button id="showDash" disabled>Show overview</button></div>
+    <div id="outMsg"></div>
+    <div id="outBox" class="hidden">
+      <div class="row"><button id="dlPage">Download this page (.html)</button></div>
+      <iframe id="preview" title="Dashboard preview"></iframe>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h5s">
+    <h2 id="h5s"><span class="step">5</span>Save</h2>
+    <p class="hint">Download the updated history file and keep it somewhere safe. It contains names and emails, so do not share it or post it anywhere public. Next time, load this file in step 1.</p>
+    <div class="row"><button id="saveHist" class="primary" disabled>Download updated history</button></div>
+  </section>
+
+  <details class="card"><summary>How this works</summary>
+    <p>This page runs the zoom-attendance pipeline's Python code inside the browser with <a href="https://pyodide.org">Pyodide</a>. Your files are read into this tab's memory and never uploaded. Reloading the page clears everything that has not been downloaded.</p>
+    <p>Matching: attendees with an email are matched to the people list, or added to it. Attendees without an email are matched by their Zoom name if that name has been seen before. Anyone else is listed in step 3 for you to match before the session is saved.</p>
+    <p>Only one person should add sessions to a history file at a time. If two people each add new people to their own copies, the same ID can be given to two different people.</p>
+    <p>The session pages and the overview show counts only, never names.</p>
+  </details>
+</main>
+<footer>University of Illinois Urbana-Champaign · built on the zoom-attendance pipeline</footer>
+
+<script type="application/json" id="pyFiles">@@PY_FILES@@</script>
+<script>
+const $ = id => document.getElementById(id);
+let py, api, summary = null, dirty = false, lastPage = null, review = null, choices = {};
+
+function setStatus(t) { $("status").textContent = t; }
+function msg(el, text, ok) { $(el).innerHTML = ""; if (!text) return;
+  const d = document.createElement("div"); d.className = "msg " + (ok ? "ok" : "err"); d.textContent = text; $(el).appendChild(d); }
+function markDirty(v) { dirty = v; $("saveBanner").style.display = v ? "block" : "none"; }
+window.addEventListener("beforeunload", e => { if (dirty || review) { e.preventDefault(); e.returnValue = ""; } });
+
+function call(name, ...args) {
+  const res = JSON.parse(api[name](...args));
+  if (!res.ok) throw new Error(res.error);
+  return res;
+}
+async function writeUpload(file, path) { py.FS.writeFile(path, new Uint8Array(await file.arrayBuffer())); }
+function download(bytes, name, type) {
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const slug = s => s.replace(/\W+/g, "_");
+
+// ------------------------------------------------------------ history and types
+
+function render(s) {
+  summary = s;
+  const st = s.settings;
+  $("deptLabel").textContent = st.dept_name || "Zoom Attendance";
+  const flags = t => [t.topics && "topics", t.presenters && "presenters", t.hidden && "hidden"].filter(Boolean)
+    .map(f => `<span class="tag">${f}</span>`).join("");
+  $("histTable").innerHTML = s.types.length ? `<table><thead><tr><th>Meeting type</th><th>Sessions</th><th>People</th><th>First</th><th>Latest</th><th>Options</th></tr></thead><tbody>${
+    s.types.map(t => `<tr><td>${esc(t.name)}</td><td>${t.sessions}</td><td>${t.people}</td><td>${t.first || "–"}</td><td>${t.last || "–"}</td><td>${flags(t)}</td></tr>`).join("")
+  }</tbody></table><p class="hint">${esc(st.dept_name || "No department name")} · overview title "${esc(st.title)}" · ${s.people} people and ${s.aliases} remembered Zoom names.</p>`
+    : `<p class="hint">No meeting types yet. Add one in step 2.</p>`;
+
+  $("typesLocked").classList.add("hidden"); $("typesBox").classList.remove("hidden");
+  const keepEdit = $("editPick").value;
+  $("editPick").innerHTML = s.types.map(t => `<option>${esc(t.name)}</option>`).join("");
+  if (s.types.some(t => t.name === keepEdit)) $("editPick").value = keepEdit;
+  fillEdit();
+  $("setDept").value = st.dept_name; $("setTitle").value = st.title;
+
+  const visible = s.types.filter(t => !t.hidden);
+  const keep = $("mtype").value;
+  $("mtype").innerHTML = visible.length ? visible.map(t => `<option>${esc(t.name)}</option>`).join("")
+    : `<option value="">Add a meeting type in step 2 first</option>`;
+  if (visible.some(t => t.name === keep)) $("mtype").value = keep;
+
+  const sessions = visible.flatMap(t => t.dates.map(d => ({ t: t.name, d }))).sort((a, b) => b.d.localeCompare(a.d));
+  $("sessPick").innerHTML = sessions.map(x => `<option value="${esc(JSON.stringify([x.t, x.d]))}">${x.d} · ${esc(x.t)}</option>`).join("");
+  $("showSession").disabled = $("sessPick").disabled = !sessions.length;
+  $("typeChecks").innerHTML = visible.filter(t => t.sessions).map(t =>
+    `<label><input type="checkbox" value="${esc(t.name)}" checked> ${esc(t.name)}</label>`).join("") ||
+    `<p class="hint">No sessions yet.</p>`;
+  $("showDash").disabled = !visible.some(t => t.sessions);
+
+  const canAdd = visible.length > 0 && !review;
+  $("mtype").disabled = $("csvFile").disabled = !visible.length || !!review;
+  $("readFile").disabled = !canAdd;
+  $("saveHist").disabled = false;
+}
+
+function fillEdit() {
+  const t = summary && summary.types.find(x => x.name === $("editPick").value);
+  for (const id of ["editName", "editTopics", "editPresenters", "editHidden", "saveType"]) $(id).disabled = !t;
+  if (!t) { $("editName").value = ""; return; }
+  $("editName").value = t.name; $("editTopics").checked = t.topics;
+  $("editPresenters").checked = t.presenters; $("editHidden").checked = t.hidden;
+}
+
+function confirmDiscard(what) {
+  if (review && !confirm(`A session you were matching has not been saved. ${what} discards it. Continue?`)) return false;
+  if (dirty && !confirm(`${what} discards changes you have not downloaded. Continue?`)) return false;
+  return true;
+}
+
+$("histFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (!confirmDiscard("Loading another history file")) { e.target.value = ""; return; }
+  try {
+    await writeUpload(f, "/work/history_in.xlsx");
+    closeReview();
+    render(call("api_load", "/work/history_in.xlsx").summary);
+    markDirty(false); msg("histMsg", `Loaded ${f.name}.`, true);
+  } catch (err) { msg("histMsg", err.message, false); }
+  e.target.value = "";
+});
+$("newHist").addEventListener("click", () => { $("newHistBox").classList.remove("hidden"); $("newDept").focus(); });
+$("cancelNew").addEventListener("click", () => $("newHistBox").classList.add("hidden"));
+$("createHist").addEventListener("click", () => {
+  if (!confirmDiscard("Starting a new history")) return;
+  try {
+    closeReview();
+    render(call("api_new", $("newDept").value, $("newTitle").value).summary);
+    $("newHistBox").classList.add("hidden"); markDirty(true);
+    msg("histMsg", "Started a new, empty history. Next, add your meeting types in step 2.", true);
+  } catch (err) { msg("histMsg", err.message, false); }
+});
+
+$("addType").addEventListener("click", () => {
+  const name = $("typeName").value.trim();
+  try {
+    render(call("api_add_type", name, $("typeTopics").checked, $("typePresenters").checked).summary);
+    $("typeName").value = ""; $("mtype").value = name; markDirty(true);
+    msg("typesMsg", `Added "${name}".`, true);
+  } catch (err) { msg("typesMsg", err.message, false); }
+});
+$("editPick").addEventListener("change", fillEdit);
+$("saveType").addEventListener("click", () => {
+  const old = $("editPick").value, name = $("editName").value.trim();
+  try {
+    const s = call("api_update_type", old, name, $("editTopics").checked, $("editPresenters").checked, $("editHidden").checked).summary;
+    $("editPick").value = name; render(s); markDirty(true);
+    msg("typesMsg", old === name ? `Saved "${name}".` : `Renamed "${old}" to "${name}". Its sessions and topics moved with it.`, true);
+  } catch (err) { msg("typesMsg", err.message, false); }
+});
+$("saveSettings").addEventListener("click", () => {
+  try { render(call("api_settings", $("setDept").value, $("setTitle").value).summary); markDirty(true);
+        msg("typesMsg", "Saved. Rebuild pages to show the change.", true); }
+  catch (err) { msg("typesMsg", err.message, false); }
+});
+
+// ------------------------------------------------------------ adding a meeting
+
+const personLabel = p => `${p.name || "(no name)"} · ${p.email || "no email"} · ${p.id}`;
+
+$("readFile").addEventListener("click", async () => {
+  const f = $("csvFile").files[0], type = $("mtype").value;
+  if (!type) return msg("addMsg", "Add a meeting type in step 2 first.", false);
+  if (!f) return msg("addMsg", "Choose the Zoom attendance file first.", false);
+  try {
+    const csvPath = "/work/" + f.name.replace(/[^\w.\- ]+/g, "_");  // keep the real name, so errors name the file
+    await writeUpload(f, csvPath);
+    openReview(call("api_prepare", csvPath, type, $("replace").checked).review, f.name);
+    msg("addMsg", "");
+  } catch (err) { msg("addMsg", err.message, false); }
+});
+
+function openReview(r, fileName) {
+  review = r; choices = {};
+  const kind = { flat_participants: "Participants report", two_section: "Participants or Usage report",
+                 meetinglistdetails: "Meeting list details" }[r.shape] || r.shape;
+  let info = `${fileName} (${kind}): ${r.program}, ${r.session_date}, ${r.rows} rows.`;
+  if (r.replaced) info += " This replaces the session already saved for that date.";
+  if (r.approximated) info += ` This file has no real join and leave times, so they were estimated from each person's total time (${r.approximated} rows). Minutes in session are still exact.`;
+  $("reviewInfo").textContent = info;
+
+  $("peopleList").innerHTML = r.people.map(p => `<option value="${esc(personLabel(p))}">`).join("");
+  $("matchBox").classList.toggle("hidden", !r.unmatched.length);
+  $("matchRows").innerHTML = r.unmatched.map((u, i) => {
+    const sugg = u.suggestions.map(id => r.people.find(p => p.id === id)).filter(Boolean)
+      .map(p => `<button type="button" class="chip" data-i="${i}" data-pick="${esc(p.id)}">${esc(p.name)}?</button>`).join("");
+    return `<tr data-i="${i}">
+      <td>${esc(u.key)}</td><td>${u.minutes}</td>
+      <td><div class="pickbox" data-pickbox="${i}">
+          <input type="text" list="peopleList" class="who" data-i="${i}" aria-label="Who is ${esc(u.key)}?" placeholder="Start typing a name or email">
+          ${sugg ? `<div>${sugg}</div>` : ""}
+          <div><button type="button" class="small addnew" data-i="${i}">Add as a new person</button></div></div>
+          <div class="newbox hidden" data-new="${i}">
+            <label>Name</label><input type="text" class="nname" data-i="${i}" value="${esc(u.zoom_name)}">
+            <label>Department (optional)</label><input type="text" class="ndept" data-i="${i}" list="deptList">
+            <label>Status (optional)</label><select class="nstatus" data-i="${i}"><option value=""></option>${
+              r.statuses.map(s => `<option>${esc(s)}</option>`).join("")}</select>
+            <div><button type="button" class="small undo" data-i="${i}">Not a new person</button></div>
+          </div></td>
+      <td class="state open" data-state="${i}">To match</td></tr>`;
+  }).join("");
+
+  $("deptList").innerHTML = r.departments.map(d => `<option value="${esc(d)}">`).join("");
+  $("newPeopleBox").classList.toggle("hidden", !r.new_people.length);
+  $("newPeopleCount").textContent = r.new_people.length;
+  $("newPeopleRows").innerHTML = r.new_people.map(p => `<tr>
+    <td>${esc(p.name)}</td><td>${esc(p.email)}</td>
+    <td><input type="text" list="deptList" class="pdept" data-id="${esc(p.id)}" aria-label="Department for ${esc(p.name)}"></td>
+    <td><select class="pstatus" data-id="${esc(p.id)}" aria-label="Status for ${esc(p.name)}"><option value=""></option>${
+      r.statuses.map(s => `<option>${esc(s)}</option>`).join("")}</select></td></tr>`).join("");
+
+  $("topicField").classList.toggle("hidden", !r.asks.topic);
+  $("presenterField").classList.toggle("hidden", !r.asks.presenter);
+  $("topic").value = r.defaults.topic; $("presenter").value = r.defaults.presenter; $("length").value = r.defaults.length;
+  msg("reviewMsg", "");
+  $("review").classList.remove("hidden");
+  $("mtype").disabled = $("csvFile").disabled = $("readFile").disabled = $("replace").disabled = true;
+  updateMatchState();
+  $("review").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeReview() {
+  review = null; choices = {};
+  $("review").classList.add("hidden");
+  $("csvFile").value = ""; $("replace").checked = false; $("replace").disabled = false;
+  if (summary) render(summary);
+}
+
+function rowChoice(i) {
+  const box = document.querySelector(`[data-new="${i}"]`);
+  if (!box.classList.contains("hidden")) {
+    const name = document.querySelector(`.nname[data-i="${i}"]`).value.trim();
+    return name ? { new: { name, department: document.querySelector(`.ndept[data-i="${i}"]`).value.trim(),
+                           status: document.querySelector(`.nstatus[data-i="${i}"]`).value } } : null;
+  }
+  const text = document.querySelector(`.who[data-i="${i}"]`).value.trim();
+  const p = review.people.find(x => personLabel(x) === text);
+  return p ? p.id : null;
+}
+
+function updateMatchState() {
+  if (!review) return;
+  let open = 0;
+  review.unmatched.forEach((u, i) => {
+    const c = rowChoice(i), cell = document.querySelector(`[data-state="${i}"]`);
+    if (c) choices[u.key] = c; else { delete choices[u.key]; open++; }
+    cell.className = "state " + (c ? "done" : "open");
+    cell.textContent = c ? (typeof c === "string" ? "✓ Matched" : "✓ New person") : "To match";
+  });
+  $("matchCount").className = "state " + (open ? "open" : "done");
+  $("matchCount").textContent = review.unmatched.length ? (open ? `(${open} still to match)` : "(all matched)") : "";
+  $("saveSession").disabled = open > 0;
+  $("saveSession").textContent = open ? `Save session (${open} still to match)` : "Save session";
+}
+
+$("matchRows").addEventListener("input", updateMatchState);
+$("matchRows").addEventListener("change", updateMatchState);
+$("matchRows").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const i = b.dataset.i, box = document.querySelector(`[data-new="${i}"]`), who = document.querySelector(`.who[data-i="${i}"]`);
+  const pickbox = document.querySelector(`[data-pickbox="${i}"]`);
+  if (b.dataset.pick) {
+    who.value = personLabel(review.people.find(p => p.id === b.dataset.pick));
+  } else if (b.classList.contains("addnew")) {
+    box.classList.remove("hidden"); pickbox.classList.add("hidden"); who.value = "";
+    box.querySelector(".nname").focus();
+  } else if (b.classList.contains("undo")) {
+    box.classList.add("hidden"); pickbox.classList.remove("hidden"); who.focus();
+  }
+  updateMatchState();
+});
+
+$("saveSession").addEventListener("click", () => {
+  updateMatchState();
+  const details = {};
+  document.querySelectorAll("#newPeopleRows tr").forEach(tr => {
+    const id = tr.querySelector(".pdept").dataset.id;
+    const department = tr.querySelector(".pdept").value.trim(), status = tr.querySelector(".pstatus").value;
+    if (department || status) details[id] = { department, status };
+  });
+  try {
+    const res = call("api_commit", JSON.stringify({ match: choices, details, topic: $("topic").value,
+                                                     presenter: $("presenter").value, length: $("length").value }));
+    const r = res.report;
+    review = null; closeReview(); render(res.summary); markDirty(true);
+    let text = `${r.replaced ? "Replaced" : "Saved"} ${r.program}, ${r.session_date}: ${r.attendees} attendees, ${r.avg_minutes} min average.`;
+    if (r.notes.length) text += "\n" + r.notes.join("\n");
+    msg("addMsg", text, true);
+    showPage(call("api_session_page", r.program, r.session_date).html, `session_${slug(r.program)}_${r.session_date}.html`);
+    msg("outMsg", "");
+  } catch (err) { msg("reviewMsg", err.message, false); }
+});
+$("cancelSession").addEventListener("click", () => {
+  try { call("api_cancel"); } catch (err) { /* nothing pending */ }
+  closeReview(); msg("addMsg", "Cancelled. Nothing was added.", true);
+});
+
+// ------------------------------------------------------------ pages and saving
+
+function showPage(html, name) {
+  lastPage = { html, name };
+  $("preview").srcdoc = html;
+  $("outBox").classList.remove("hidden");
+}
+$("showSession").addEventListener("click", () => {
+  const [t, d] = JSON.parse($("sessPick").value);
+  try { showPage(call("api_session_page", t, d).html, `session_${slug(t)}_${d}.html`); msg("outMsg", ""); }
+  catch (err) { msg("outMsg", err.message, false); }
+});
+$("showDash").addEventListener("click", () => {
+  const picked = [...$("typeChecks").querySelectorAll("input:checked")].map(i => i.value);
+  try { showPage(call("api_dashboard", JSON.stringify(picked)).html, "overview.html"); msg("outMsg", ""); }
+  catch (err) { msg("outMsg", err.message, false); }
+});
+$("dlPage").addEventListener("click", () => lastPage && download(lastPage.html, lastPage.name, "text/html"));
+$("saveHist").addEventListener("click", () => {
+  if (review && !confirm("The session you are matching is not saved yet and will not be in this file. Download anyway?")) return;
+  try {
+    call("api_save", "/work/history_out.xlsx");
+    const n = new Date(), p = x => String(x).padStart(2, "0");
+    const today = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;  // local date, not UTC
+    download(py.FS.readFile("/work/history_out.xlsx"), `attendance_history_${today}.xlsx`,
+             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    markDirty(false);
+  } catch (err) { alert(err.message); }
+});
+
+(async () => {
+  try {
+    py = await loadPyodide();
+    setStatus("Loading pandas and openpyxl…");
+    await py.loadPackage(["pandas", "micropip"]);
+    await py.pyimport("micropip").install("openpyxl");
+    py.FS.mkdirTree("/app/tools"); py.FS.mkdirTree("/app/engine"); py.FS.mkdirTree("/work");
+    const files = JSON.parse($("pyFiles").textContent);
+    for (const [path, src] of Object.entries(files)) py.FS.writeFile("/app/" + path, src);
+    py.runPython("import sys; sys.path[:0] = ['/app/tools', '/app/engine']");
+    api = py.pyimport("web_engine");
+    setStatus("Ready. Your files stay in this browser tab.");
+    $("histFile").disabled = $("newHist").disabled = false;
+  } catch (err) {
+    setStatus("Could not load Python: " + err.message + " (this page needs an internet connection to load).");
+  }
+})();
+</script>
+</body>
+</html>
