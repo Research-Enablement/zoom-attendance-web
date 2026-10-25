@@ -133,6 +133,14 @@ def main():
     s = call(we.api_update_type, "Coding Club", "Coding Club", False, False, True)["summary"]
     check(next(t for t in s["types"] if t["name"] == "Coding Club")["hidden"], "hide saved")
 
+    # --- mailing list
+    ml = os.path.join(tmp, "mailing_list.csv")
+    st = call(we.api_mailing_list, ml)["stats"]
+    with open(ml) as f:
+        lines = f.read().split()
+    check(lines == ["email", "ada@example.edu", "ben@example.edu", "eve@example.edu"], "mailing list: unique emails only")
+    check(st["no_email"] == 1, "mailing list counts the person with no email")
+
     # --- save, load, and an older experiment file
     out = os.path.join(tmp, "history.xlsx")
     call(we.api_save, out)

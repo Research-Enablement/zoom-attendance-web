@@ -36,6 +36,7 @@ import pandas as pd
 import init_workbook as iw
 import normalize_to_participants_report as nz
 import recompile_workbook as rw
+import refresh_master as rm
 from generate_aggregate_dashboard import compute_program, compute_aggregate, render_aggregate
 from render_session_page import render_session_page
 from session_stats import load_program_data, compute_session_stats
@@ -549,6 +550,19 @@ def api_cancel():
 def api_commit(choices_json):
     report = commit_session(_h(), json.loads(choices_json))
     return _ok(report=report, summary=summary(_h()))
+
+
+def mailing_list(h, path):
+    """The pipeline's mailing list: every unique, valid email in the people list."""
+    with tempfile.TemporaryDirectory() as tmp, _pipeline_call():
+        people = os.path.join(tmp, "people.csv")
+        h["people_db"].to_csv(people, index=False)
+        return rm.write_mailing_list(people, path)
+
+
+@_guard
+def api_mailing_list(path):
+    return _ok(stats=mailing_list(_h(), path))
 
 
 @_guard

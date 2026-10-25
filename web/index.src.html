@@ -193,6 +193,10 @@
     <h2 id="h5s"><span class="step">5</span>Save</h2>
     <p class="hint">Download the updated history file and keep it somewhere safe. It contains names and emails, so do not share it or post it anywhere public. Next time, load this file in step 1.</p>
     <div class="row"><button id="saveHist" class="primary" disabled>Download updated history</button></div>
+    <h3>Mailing list</h3>
+    <p class="hint">One column of email addresses: everyone in the history who has one, each listed once. People who joined without an email are not on it.</p>
+    <div class="row"><button id="mailList" disabled>Download mailing list (.csv)</button></div>
+    <div id="mailMsg"></div>
   </section>
 
   <details class="card"><summary>How this works</summary>
@@ -266,7 +270,7 @@ function render(s) {
   const canAdd = visible.length > 0 && !review;
   $("mtype").disabled = $("csvFile").disabled = !visible.length || !!review;
   $("readFile").disabled = !canAdd;
-  $("saveHist").disabled = false;
+  $("saveHist").disabled = $("mailList").disabled = false;
 }
 
 function fillEdit() {
@@ -488,6 +492,17 @@ $("showDash").addEventListener("click", () => {
   catch (err) { msg("outMsg", err.message, false); }
 });
 $("dlPage").addEventListener("click", () => lastPage && download(lastPage.html, lastPage.name, "text/html"));
+$("mailList").addEventListener("click", () => {
+  try {
+    const st = call("api_mailing_list", "/work/mailing_list.csv").stats;
+    const n = new Date(), p = x => String(x).padStart(2, "0");
+    download(py.FS.readFile("/work/mailing_list.csv"), `mailing_list_${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}.csv`, "text/csv");
+    let text = `${st.addresses} addresses, from ${st.people} people.`;
+    if (st.no_email) text += ` ${st.no_email} have no email.`;
+    if (st.malformed) text += ` ${st.malformed} email(s) looked wrong and were left out.`;
+    msg("mailMsg", text, true);
+  } catch (err) { msg("mailMsg", err.message, false); }
+});
 $("saveHist").addEventListener("click", () => {
   if (review && !confirm("The session you are matching is not saved yet and will not be in this file. Download anyway?")) return;
   try {
