@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zoom Attendance Dashboards</title>
+<!-- Google tag (gtag.js): counts visits and button uses only, never files, names or emails -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-E1NMYFNE35"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-E1NMYFNE35');
+</script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <style>
   :root { --blue: #13294B; --orange: #E84A27; --bg: #f0f2f5; --card: #fff; --text: #333;
@@ -204,6 +212,7 @@
     <p>Matching: attendees with an email are matched to the people list, or added to it. Attendees without an email are matched by their Zoom name if that name has been seen before. Anyone else is listed in step 3 for you to match before the session is saved.</p>
     <p>Only one person should add sessions to a history file at a time. If two people each add new people to their own copies, the same ID can be given to two different people.</p>
     <p>The session pages and the overview show counts only, never names.</p>
+    <p>This page counts visits and which buttons are used (for example "session saved") with Google Analytics, to see how much the tool is used. It never sends your files, names or emails.</p>
   </details>
 </main>
 <footer>University of Illinois Urbana-Champaign · built on the zoom-attendance pipeline</footer>
@@ -232,6 +241,8 @@ function download(bytes, name, type) {
 }
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const slug = s => s.replace(/\W+/g, "_");
+// Usage counts for Google Analytics: the event name only, never any data from the files.
+const track = name => { try { if (window.gtag) gtag("event", name); } catch (e) { /* counting must never break the page */ } };
 
 // ------------------------------------------------------------ history and types
 
@@ -294,7 +305,7 @@ $("histFile").addEventListener("change", async e => {
     await writeUpload(f, "/work/history_in.xlsx");
     closeReview();
     render(call("api_load", "/work/history_in.xlsx").summary);
-    markDirty(false); msg("histMsg", `Loaded ${f.name}.`, true);
+    markDirty(false); msg("histMsg", `Loaded ${f.name}.`, true); track("history_loaded");
   } catch (err) { msg("histMsg", err.message, false); }
   e.target.value = "";
 });
@@ -306,7 +317,7 @@ $("createHist").addEventListener("click", () => {
     closeReview();
     render(call("api_new", $("newDept").value, $("newTitle").value).summary);
     $("newHistBox").classList.add("hidden"); markDirty(true);
-    msg("histMsg", "Started a new, empty history. Next, add your meeting types in step 2.", true);
+    msg("histMsg", "Started a new, empty history. Next, add your meeting types in step 2.", true); track("history_started");
   } catch (err) { msg("histMsg", err.message, false); }
 });
 
@@ -464,7 +475,7 @@ $("saveSession").addEventListener("click", () => {
     review = null; closeReview(); render(res.summary); markDirty(true);
     let text = `${r.replaced ? "Replaced" : "Saved"} ${r.program}, ${r.session_date}: ${r.attendees} attendees, ${r.avg_minutes} min average.`;
     if (r.notes.length) text += "\n" + r.notes.join("\n");
-    msg("addMsg", text, true);
+    msg("addMsg", text, true); track("session_saved");
     showPage(call("api_session_page", r.program, r.session_date).html, `session_${slug(r.program)}_${r.session_date}.html`);
     msg("outMsg", "");
   } catch (err) { msg("reviewMsg", err.message, false); }
@@ -483,15 +494,15 @@ function showPage(html, name) {
 }
 $("showSession").addEventListener("click", () => {
   const [t, d] = JSON.parse($("sessPick").value);
-  try { showPage(call("api_session_page", t, d).html, `session_${slug(t)}_${d}.html`); msg("outMsg", ""); }
+  try { showPage(call("api_session_page", t, d).html, `session_${slug(t)}_${d}.html`); msg("outMsg", ""); track("session_page_shown"); }
   catch (err) { msg("outMsg", err.message, false); }
 });
 $("showDash").addEventListener("click", () => {
   const picked = [...$("typeChecks").querySelectorAll("input:checked")].map(i => i.value);
-  try { showPage(call("api_dashboard", JSON.stringify(picked)).html, "overview.html"); msg("outMsg", ""); }
+  try { showPage(call("api_dashboard", JSON.stringify(picked)).html, "overview.html"); msg("outMsg", ""); track("overview_shown"); }
   catch (err) { msg("outMsg", err.message, false); }
 });
-$("dlPage").addEventListener("click", () => lastPage && download(lastPage.html, lastPage.name, "text/html"));
+$("dlPage").addEventListener("click", () => { if (lastPage) { download(lastPage.html, lastPage.name, "text/html"); track("page_downloaded"); } });
 $("mailList").addEventListener("click", () => {
   try {
     const st = call("api_mailing_list", "/work/mailing_list.csv").stats;
@@ -500,7 +511,7 @@ $("mailList").addEventListener("click", () => {
     let text = `${st.addresses} addresses, from ${st.people} people.`;
     if (st.no_email) text += ` ${st.no_email} have no email.`;
     if (st.malformed) text += ` ${st.malformed} email(s) looked wrong and were left out.`;
-    msg("mailMsg", text, true);
+    msg("mailMsg", text, true); track("mailing_list_downloaded");
   } catch (err) { msg("mailMsg", err.message, false); }
 });
 $("saveHist").addEventListener("click", () => {
@@ -511,7 +522,7 @@ $("saveHist").addEventListener("click", () => {
     const today = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;  // local date, not UTC
     download(py.FS.readFile("/work/history_out.xlsx"), `attendance_history_${today}.xlsx`,
              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    markDirty(false);
+    markDirty(false); track("history_downloaded");
   } catch (err) { alert(err.message); }
 });
 
