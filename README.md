@@ -19,7 +19,7 @@ Open [the page](https://research-enablement.github.io/zoom-attendance-web/) in C
    - **New people (optional):** people added from their email can be given a department and status, so the charts show them under the right college.
    - **Session details:** topic, presenters, and how long the meeting was.
    - Click **Save session**.
-4. **Dashboards.** Show a session page or the overview across meeting types, and download them as .html files.
+4. **Dashboards.** Show a session page or the overview across meeting types, and download them as .html files. The **internal page** for a session adds the full list of attendees by name: keep it within your team, and never publish or share it.
 5. **Save.** Download the updated history file. **This is the only copy**, so keep it somewhere safe. It contains names and emails, so never share it or post it anywhere public.
    You can also download a **mailing list**: one column of every unique email address in the history.
 
@@ -56,3 +56,32 @@ You can open it in Excel to fix a department or status. Keep the sheet and colum
 ## For maintainers
 
 The page is built from these files. **Edit them, never `index.html`**, which is generated.
+
+```
+web/index.src.html                 the page
+engine/web_engine.py               connects the page to the pipeline code
+tools/                             copied from zoom-attendance-template, unchanged
+config/master_dept_to_parent.csv   starter department-to-college list for new histories
+build.py                           puts it all together into index.html
+tests/test_engine.py               tests with made-up data
+```
+
+After any change:
+
+```
+python3 tests/test_engine.py
+python3 build.py
+```
+
+Then commit `index.html` along with your changes.
+
+When a fix is made to the pipeline in `zoom-attendance-template`, copy the changed file into `tools/`, run the tests, and rebuild.
+
+### Publishing with GitHub Pages
+
+On the repo's GitHub page: **Settings → Pages**. Under **Build and deployment**, set **Source** to **Deploy from a branch**, then choose **main** and **/ (root)**, and click **Save**. After a minute or two, the page is live at https://research-enablement.github.io/zoom-attendance-web/.
+
+## Problems and questions
+
+Open an issue on this repo's **Issues** tab. Describe what you did and copy any message the page showed. Never attach data files or paste attendee names.
+

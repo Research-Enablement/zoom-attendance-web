@@ -38,6 +38,7 @@ import normalize_to_participants_report as nz
 import recompile_workbook as rw
 import refresh_master as rm
 from generate_aggregate_dashboard import compute_program, compute_aggregate, render_aggregate
+from render_internal_page import build_roster, render_internal_page
 from render_session_page import render_session_page
 from session_stats import load_program_data, compute_session_stats
 
@@ -447,7 +448,8 @@ def _write_program_inputs(h, program, tmp):
     return paths
 
 
-def session_page(h, program, session_date):
+def session_page(h, program, session_date, internal=False):
+    """internal=True adds the named roster (never publish that page)."""
     t = _type_row(h, program)
     with tempfile.TemporaryDirectory() as tmp, _pipeline_call():
         p = _write_program_inputs(h, program, tmp)
@@ -459,8 +461,13 @@ def session_page(h, program, session_date):
             stats["topic"] = ""
         if not _flag(t["presenters"], True):
             stats["presenter"] = ""
-        return render_session_page(stats, program, session_number=all_dates.index(session_date) + 1,
-                                   total_in_series=len(all_dates), dept_name=h["settings"]["dept_name"])
+        number, dept_name = all_dates.index(session_date) + 1, h["settings"]["dept_name"]
+        if internal:
+            roster = build_roster(session_date, log, people, dept)
+            return render_internal_page(stats, roster, program, session_number=number,
+                                        total_in_series=len(all_dates), dept_name=dept_name)
+        return render_session_page(stats, program, session_number=number,
+                                   total_in_series=len(all_dates), dept_name=dept_name)
 
 
 def combined_dashboard(h, programs):
@@ -574,6 +581,11 @@ def api_save(path):
 @_guard
 def api_session_page(program, session_date):
     return _ok(html=session_page(_h(), program, session_date))
+
+
+@_guard
+def api_internal_page(program, session_date):
+    return _ok(html=session_page(_h(), program, session_date, internal=True))
 
 
 @_guard

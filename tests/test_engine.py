@@ -123,6 +123,9 @@ def main():
     page = call(we.api_session_page, "Data Workshop", "2026-09-10")["html"]
     check("Stayed &ge; 75 min" in page and "Example Unit" in page, "session page uses length and dept name")
     check("Cy Phone" not in page and "Ada Example" not in page, "no names on the session page")
+    internal = call(we.api_internal_page, "Data Workshop", "2026-09-10")["html"]
+    check("Cy Phone" in internal and "Ada Example" in internal and "Internal use only" in internal
+          and 'name="robots" content="noindex"' in internal, "internal page lists names, with warning")
     dash = call(we.api_dashboard, json.dumps(["Data Workshop", "Coding Club"]))["html"]
     check("Example Unit" in dash and "Ada Example" not in dash, "overview has dept name, no names")
 
